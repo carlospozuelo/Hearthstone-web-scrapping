@@ -5,13 +5,21 @@ from telegram.ext import CallbackContext, Filters
 from telegram.ext import CommandHandler, MessageHandler, ConversationHandler
 from bs4 import BeautifulSoup
 
+# CARLOS MANUEL POZUELO RIVAS - HEARTHSTONE LIBRARY SCRAPPER
+
+# Text strings
 SELECT_SET = '-> Select set'
 GO_BACK = '-> Search cards'
+SELECT_CLASS = '-> Select class'
 
-CONFIG, SET = range(2)
+# Conversation status
+CONFIG, SET, CLASS = range(3)
 
 current_set = {}
 current_set_value = {}
+
+current_class = {}
+current_class_value = {}
 
 def get (url):
     req = ur.Request(url)
@@ -31,6 +39,15 @@ def search_sets():
         values[set.string] = set['value']
     return values
 
+def search_classes():
+    doc = get(f'https://www.hearthstonetopdecks.com/cards/')
+    soup = BeautifulSoup(doc, 'html.parser')
+    all_classes = soup.find('select', {'name':'class'}).find_all('option')
+    values = {}
+    for set in all_classes:
+        values[set.string] = set['value']
+    return values
+
 def change_set(update: Update, context: CallbackContext):
     sets = search_sets()
     buttons = []
@@ -43,6 +60,18 @@ def change_set(update: Update, context: CallbackContext):
     context.bot.send_message(chat_id=update.effective_chat.id, text=f"Select desired set. Current set is {set}", reply_markup=ReplyKeyboardMarkup(buttons, one_time_keyboard=True))
     return SET
 
+def change_class(update: Update, context: CallbackContext):
+    classes = search_classes()
+    buttons = []
+    for c_class in classes:
+        buttons.append([c_class])
+    current_class = 'All Classes'
+    if update.effective_user in current_set:
+        current_class = current_set[update.effective_user]
+    context.bot.send_message(chat_id=update.effective_chat.id, text=f"Select desired set. Current set is {current_class}", reply_markup=ReplyKeyboardMarkup(buttons, one_time_keyboard=True))
+    return CLASS
+
+
 def set_set(update: Update, context: CallbackContext):
     current_set[update.effective_user] = update.message.text
     current_set_value[update.effective_user] = search_sets()[update.message.text]
@@ -51,10 +80,20 @@ def set_set(update: Update, context: CallbackContext):
     context.bot.send_message(chat_id=update.effective_chat.id, text=f"Set changed succesfully. Current set is {data}.")
     return configure(update,context)
 
+def set_class(update: Update, context: CallbackContext):
+    current_class[update.effective_user] = update.message.text
+    current_class_value[update.effective_user] = search_classes()[update.message.text]
+    data = current_class[update.effective_user]
+    # print(current_set)
+    context.bot.send_message(chat_id=update.effective_chat.id, text=f"Class changed succesfully. Current class is {data}.")
+    return configure(update,context)
+
 def search(update: Update, context: CallbackContext):
     if update.effective_user not in current_set_value:
         current_set_value[update.effective_user] = ''
-    doc = get(f'https://www.hearthstonetopdecks.com/cards/?st={update.message.text}&set={current_set_value[update.effective_user]}')
+    if update.effective_user not in current_class_value:
+        current_class_value[update.effective_user] = ''
+    doc = get(f'https://www.hearthstonetopdecks.com/cards/?st={update.message.text}&class={current_class_value[update.effective_user]}&set={current_set_value[update.effective_user]}')
     soup = BeautifulSoup(doc, 'html.parser')
     cards = soup.find_all("div", {"class": "card-item"})
     if len(cards) > 5:
@@ -90,13 +129,14 @@ def start(update: Update, context: CallbackContext):
     context.bot.send_message(chat_id=update.effective_chat.id, text="Hi! Type the name of a card and I'll send you up to 5 results! 😉")
 
 def configure(update: Update, context: CallbackContext):
-    buttons = [[KeyboardButton(SELECT_SET), KeyboardButton(GO_BACK)]]
+    buttons = [[KeyboardButton(SELECT_SET), KeyboardButton(SELECT_CLASS), KeyboardButton(GO_BACK)]]
     context.bot.send_message(chat_id=update.effective_chat.id, text="Select additional filters", reply_markup=ReplyKeyboardMarkup(buttons, one_time_keyboard=True))
     return CONFIG
 
 def analyze(update: Update, context: CallbackContext):
     if update.message.text == SELECT_SET: return change_set(update, context)
-    if update.message.text == GO_BACK: return ConversationHandler.END
+    if update.message.text == SELECT_CLASS: return change_class(update, context)
+    return ConversationHandler.END
 
 def main():
     updater = Updater(token='5206101395:AAENA6s7gPRK1m-J_QRTqacpD_Z_IIak_Sc', use_context=True)
@@ -107,7 +147,8 @@ def main():
         entry_points=[CommandHandler('configure', configure), search_handler],
         states= {
             CONFIG: [MessageHandler(Filters.text, analyze)],
-            SET: [MessageHandler(Filters.text, set_set)]
+            SET: [MessageHandler(Filters.text, set_set)],
+            CLASS: [MessageHandler(Filters.text, set_class)]
         },
         fallbacks=[CommandHandler('cancel', ConversationHandler.END)],
     )
