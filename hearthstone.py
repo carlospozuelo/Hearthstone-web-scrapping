@@ -65,10 +65,10 @@ def change_class(update: Update, context: CallbackContext):
     buttons = []
     for c_class in classes:
         buttons.append([c_class])
-    current_class = 'All Classes'
-    if update.effective_user in current_set:
-        current_class = current_set[update.effective_user]
-    context.bot.send_message(chat_id=update.effective_chat.id, text=f"Select desired set. Current set is {current_class}", reply_markup=ReplyKeyboardMarkup(buttons, one_time_keyboard=True))
+    c_class = 'All Classes'
+    if update.effective_user in current_class:
+        c_class = current_class[update.effective_user]
+    context.bot.send_message(chat_id=update.effective_chat.id, text=f"Select desired class. Current class is {c_class}", reply_markup=ReplyKeyboardMarkup(buttons, one_time_keyboard=True))
     return CLASS
 
 
