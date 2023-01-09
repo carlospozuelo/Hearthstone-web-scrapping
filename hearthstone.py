@@ -21,6 +21,8 @@ current_set_value = {}
 current_class = {}
 current_class_value = {}
 
+TOKEN = ''
+
 def get (url):
     req = ur.Request(url)
     req.add_header('User-Agent', 'Chrome/71.0.3578.98 Safari/537.36')
@@ -139,7 +141,7 @@ def analyze(update: Update, context: CallbackContext):
     return ConversationHandler.END
 
 def main():
-    updater = Updater(token='5206101395:AAENA6s7gPRK1m-J_QRTqacpD_Z_IIak_Sc', use_context=True)
+    updater = Updater(token=TOKEN, use_context=True)
     dispatcher = updater.dispatcher
     start_handler = CommandHandler('start', start)
     search_handler = MessageHandler(Filters.regex('^[^\/].*'), search)
